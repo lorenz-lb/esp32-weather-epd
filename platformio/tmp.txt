@@ -1,0 +1,20 @@
+daily: 
+- max 
+- min 
+- pop
+- snow
+- rain
+- clouds
+- wind_speed
+- wind_guest
+-TODO:
+- weather.id
+
+
+Current:
+- icon
+- temp
+
+
+
+DrawForecast bracuht Daily

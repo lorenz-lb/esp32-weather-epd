@@ -16,6 +16,8 @@
  */
 
 #include "renderer.h"
+#include "HardwareSerial.h"
+#include "Print.h"
 #include "_locale.h"
 #include "_strftime.h"
 #include "api_response.h"
@@ -205,10 +207,9 @@ void powerOffDisplay() {
   return;
 } // end initDisplay
 
-void drawCurrentConditions(const owm_current_t &current,
-                           const owm_daily_t &today,
-                           const owm_resp_air_pollution_t &owm_air_pollution,
-                           float inTemp, float inHumidity) {
+void drawCurrentConditions(const dwd_current_t &current,
+                           const dwd_daily_t &today, float inTemp,
+                           float inHumidity) {
   String dataStr, unitStr;
 
   // ########## Weather Icon ##########
@@ -224,7 +225,7 @@ void drawCurrentConditions(const owm_current_t &current,
   // debug
   // display.drawRect(196, 0, 164, 140, 0);
 
-  dataStr = String(static_cast<int>(std::round(current.temp)));
+  dataStr = String(static_cast<int>(std::round(current.condition.temperatur)));
   unitStr = TXT_UNITS_TEMP_CELSIUS;
   const int unit_offset = 20;
 
@@ -281,7 +282,7 @@ void drawCurrentConditions(const owm_current_t &current,
 
 /* This function is responsible for drawing the five day forecast.
  */
-void drawForecast(const owm_daily_t *daily, tm timeInfo) {
+void drawForecast(const dwd_daily_t *daily, tm timeInfo) {
   // 5 day, forecast
   String hiStr, loStr;
   String dataStr, unitStr;
@@ -301,8 +302,8 @@ void drawForecast(const owm_daily_t *daily, tm timeInfo) {
     // high | low
     display.setFont(&FONT_8pt8b);
     drawString(x + 31, 98 + 69 / 2 + 38 - 6 + 12, "|", CENTER);
-    hiStr = String(static_cast<int>(std::round(daily[i].temp.max))) + "\260";
-    loStr = String(static_cast<int>(std::round(daily[i].temp.min))) + "\260";
+    hiStr = String(static_cast<int>(std::round(daily[i].temp_max))) + "\260";
+    loStr = String(static_cast<int>(std::round(daily[i].temp_min))) + "\260";
     drawString(x + 31 - 4, 98 + 69 / 2 + 38 - 6 + 12, hiStr, RIGHT);
     drawString(x + 31 + 5, 98 + 69 / 2 + 38 - 6 + 12, loStr, LEFT);
 
@@ -320,26 +321,10 @@ void drawForecast(const owm_daily_t *daily, tm timeInfo) {
     dailyPrecip = std::round(dailyPrecip);
     dataStr = String(static_cast<int>(dailyPrecip));
     unitStr = String(" ") + TXT_UNITS_PRECIP_MILLIMETERS;
-#elif defined(UNITS_DAILY_PRECIP_CENTIMETERS)
-    // Round up to nearest 0.1 cm
-    dailyPrecip = millimeters_to_centimeters(dailyPrecip);
-    dailyPrecip = std::round(dailyPrecip * 10) / 10.0f;
-    dataStr = String(dailyPrecip, 1);
-    unitStr = String(" ") + TXT_UNITS_PRECIP_CENTIMETERS;
-#elif defined(UNITS_DAILY_PRECIP_INCHES)
-    // Round up to nearest 0.1 inch
-    dailyPrecip = millimeters_to_inches(dailyPrecip);
-    dailyPrecip = std::round(dailyPrecip * 10) / 10.0f;
-    dataStr = String(dailyPrecip, 1);
-    unitStr = String(" ") + TXT_UNITS_PRECIP_INCHES;
 #endif
-#endif
-#if (DISPLAY_DAILY_PRECIP == 2) // smart
     if (dailyPrecip > 0.0f) {
-#endif
       display.setFont(&FONT_6pt8b);
       drawString(x + 31, 98 + 69 / 2 + 38 - 6 + 26, dataStr + unitStr, CENTER);
-#if (DISPLAY_DAILY_PRECIP == 2) // smart
     }
 #endif
 #endif // DISPLAY_DAILY_PRECIP
@@ -347,15 +332,6 @@ void drawForecast(const owm_daily_t *daily, tm timeInfo) {
 
   return;
 } // end drawForecast
-
-/* This function is responsible for drawing the current alerts if any.
- * Up to 2 alerts can be drawn.
- */
-void drawAlerts(std::vector<owm_alerts_t> &alerts, const String &city,
-                const String &date) {
-  // no alerts
-  return;
-}
 
 /* This function is responsible for drawing the city string and date
  * information in the top right corner.
@@ -382,16 +358,26 @@ inline int modulo(int a, int b) {
 /* Convert temperature in celsius to the display y coordinate to be plotted.
  */
 int temperatur_to_plot_y(float temperatur, int tempBoundMin, float yPxPerUnit,
-                     int yBoundMin) {
-  return static_cast<int>(std::round(
-      yBoundMin - (yPxPerUnit * (temperatur - tempBoundMin))));
+                         int yBoundMin) {
+  return static_cast<int>(
+      std::round(yBoundMin - (yPxPerUnit * (temperatur - tempBoundMin))));
+}
+
+void printTime2(tm &timeInfo) {
+  Serial.printf("Time: %i-%i-%iT%i:%i\n", timeInfo.tm_year + 1900, timeInfo.tm_mon + 1, timeInfo.tm_mday, timeInfo.tm_hour, timeInfo.tm_min);
 }
 
 /* This function is responsible for drawing the outlook graph for the specified
  * number of hours(up to 48).
  */
-void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
+void drawOutlookGraph(const dwd_hourly_t *hourly, const dwd_daily_t *daily,
                       tm timeInfo) {
+
+  // offset to current time
+  hourly += timeInfo.tm_hour;
+  // auto hourly_off = hourly + std::max(0,timeInfo.tm_hour);
+  Serial.printf("\nCurrent HOUR = %d\n\n", timeInfo.tm_hour);
+
   const int xPos0 = 50;
   int xPos1 = DISP_WIDTH;
   const int yPos0 = 216;
@@ -403,25 +389,33 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
   int xMaxTicks = 12;
 
   // calculate y max/min and intervals
-  float tempMin = hourly[0].temp;
+  float tempMin = hourly[0].temperatur;
   float tempMax = tempMin;
 #ifdef UNITS_HOURLY_PRECIP_POP
-  float precipMax = hourly[0].pop;
+  float precipMax = hourly[0].precipitation_probability;
 #else
-  float precipMax = hourly[0].rain_1h + hourly[0].snow_1h;
+  float precipMax = hourly[0].precipitation;
 #endif
   float newTemp = 0;
-  for (int i = 1; i < HOURLY_GRAPH_MAX; ++i) {
-    newTemp = hourly[i].temp;
+
+  for (int i = 0; i < HOURLY_GRAPH_MAX; ++i) {
+    newTemp = hourly[i].temperatur;
     tempMin = std::min(tempMin, newTemp);
     tempMax = std::max(tempMax, newTemp);
 #ifdef UNITS_HOURLY_PRECIP_POP
-    precipMax = std::max<float>(precipMax, hourly[i].pop);
+    precipMax = std::max<float>(precipMax, hourly[i].precipitation_probability);
 #else
-    precipMax =
-        std::max<float>(precipMax, hourly[i].rain_1h + hourly[i].snow_1h);
+    precipMax = std::max<float>(precipMax, hourly[i].precipitation);
 #endif
+
+    Serial.printf("Temperatur: %f \t Precipitation: %f \t",hourly[i].temperatur, hourly[i].precipitation);
+    Serial.printf("Time: %i-%i-%iT%i:%i\n", hourly[i].time.tm_year + 1900,
+                hourly[i].time.tm_mon + 1, hourly[i].time.tm_mday, hourly[i].time.tm_hour,
+                hourly[i].time.tm_min);
   }
+
+  Serial.printf("MaxPrecipitation: %f \n", precipMax);
+
   int tempBoundMin = static_cast<int>(tempMin - 1) -
                      modulo(static_cast<int>(tempMin - 1), yTempMajorTicks);
   int tempBoundMax = static_cast<int>(tempMax + 1) +
@@ -467,6 +461,11 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
 
   if (precipBoundMax > 0) { // fill need extra room for labels
     xPos1 -= 23;
+  }
+
+  // ensure that the scaling is not missleading
+  if ( precipBoundMax > 0 && precipBoundMax < 3.0f) {
+    precipBoundMax = 3.0f;
   }
 
   // draw x axis
@@ -527,7 +526,7 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
   x_t.reserve(HOURLY_GRAPH_MAX);
   y_t.reserve(HOURLY_GRAPH_MAX);
   for (int i = 0; i < HOURLY_GRAPH_MAX; ++i) {
-    y_t[i] = temperatur_to_plot_y(hourly[i].temp, tempBoundMin, yPxPerUnit, yPos1);
+    y_t[i] = temperatur_to_plot_y(hourly[i].temperatur, tempBoundMin, yPxPerUnit, yPos1);
     x_t[i] = static_cast<int>(
         std::round(xPos0 + (i * xInterval) + (0.5 * xInterval)));
   }
@@ -553,9 +552,10 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
 
       // draw hourly bitmap
 #if DISPLAY_HOURLY_ICONS
-      if (daily[day_idx].dt + 86400 <= hourly[i].dt) {
+      if (daily[day_idx].time.tm_mday != hourly[i].time.tm_mday) {
         ++day_idx;
       }
+
       if ((i % hourInterval) == 0) // skip first and last tick
       {
         int y_b = INT_MAX;
@@ -590,9 +590,9 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
     }
 
 #ifdef UNITS_HOURLY_PRECIP_POP
-    float precipVal = hourly[i].pop * 100;
+    float precipVal = hourly[i].precipitation_probability;
 #else
-    float precipVal = hourly[i].rain_1h + hourly[i].snow_1h;
+    float precipVal = hourly[i].precipitation;
 #ifdef UNITS_HOURLY_PRECIP_CENTIMETERS
     precipVal = millimeters_to_centimeters(precipVal);
 #endif
@@ -617,9 +617,8 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
       display.drawLine(xTick + 1, yPos1 + 1, xTick + 1, yPos1 + 4, GxEPD_BLACK);
       // draw x axis labels
       char timeBuffer[12] = {}; // big enough to accommodate "hh:mm:ss am"
-      time_t ts = hourly[i].dt;
-      tm *timeInfo = localtime(&ts);
-      _strftime(timeBuffer, sizeof(timeBuffer), HOUR_FORMAT, timeInfo);
+      tm timeInfo = hourly[i].time;
+      _strftime(timeBuffer, sizeof(timeBuffer), HOUR_FORMAT, &timeInfo);
       drawString(xTick, yPos1 + 1 + 12 + 4 + 3, timeBuffer, CENTER);
     }
   }
@@ -633,9 +632,9 @@ void drawOutlookGraph(const owm_hourly_t *hourly, const owm_daily_t *daily,
     display.drawLine(xTick + 1, yPos1 + 1, xTick + 1, yPos1 + 4, GxEPD_BLACK);
     // draw x axis labels
     char timeBuffer[12] = {}; // big enough to accommodate "hh:mm:ss am"
-    time_t ts = hourly[HOURLY_GRAPH_MAX - 1].dt + 3600;
-    tm *timeInfo = localtime(&ts);
-    _strftime(timeBuffer, sizeof(timeBuffer), HOUR_FORMAT, timeInfo);
+    tm timeInfo = hourly[HOURLY_GRAPH_MAX - 1].time;
+    timeInfo.tm_hour += 1;
+    _strftime(timeBuffer, sizeof(timeBuffer), HOUR_FORMAT, &timeInfo);
     drawString(xTick, yPos1 + 1 + 12 + 4 + 3, timeBuffer, CENTER);
   }
 

@@ -21,24 +21,13 @@
 #include <Arduino.h>
 #include "api_response.h"
 #include "config.h"
-#ifdef USE_HTTP
-  #include <WiFiClient.h>
-#else
-  #include <WiFiClientSecure.h>
-#endif
+#include <WiFiClientSecure.h>
+#include <time.h>
 
 wl_status_t startWiFi(int &wifiRSSI);
+void addDays(tm &timeInfo, int days);
 void killWiFi();
 bool waitForSNTPSync(tm *timeInfo);
 bool printLocalTime(tm *timeInfo);
-#ifdef USE_HTTP
-  int getOWMonecall(WiFiClient &client, owm_resp_onecall_t &r);
-  int getOWMairpollution(WiFiClient &client, owm_resp_air_pollution_t &r);
-#else
-  int getOWMonecall(WiFiClientSecure &client, owm_resp_onecall_t &r);
-  int getOWMairpollution(WiFiClientSecure &client, owm_resp_air_pollution_t &r);
+int getDWDonecall(WiFiClientSecure &client, dwd_resp_onecall_t &r, tm &time_info);
 #endif
-
-
-#endif
-

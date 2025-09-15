@@ -117,8 +117,8 @@
 // This can either be Probability of Precipitation (PoP) or hourly volume.
 //   Metric   : Millimeters
 //   Imperial : Inches
-#define UNITS_HOURLY_PRECIP_POP
-// #define UNITS_HOURLY_PRECIP_MILLIMETERS
+// #define UNITS_HOURLY_PRECIP_POP
+#define UNITS_HOURLY_PRECIP_MILLIMETERS
 // #define UNITS_HOURLY_PRECIP_CENTIMETERS
 // #define UNITS_HOURLY_PRECIP_INCHES
 
@@ -239,14 +239,6 @@
 //   1 : Enable
 #define DISPLAY_HOURLY_ICONS 1
 
-// ALERTS
-//   The handling of alerts is complex. Each country has a unique national alert
-//   system that receives alerts from many different government agencies. This
-//   results is huge variance in the formatting of alerts. OpenWeatherMap
-//   provides alerts in English only. Any combination of these factors may make
-//   it undesirable to display alerts in some regions.
-//   Disable alerts by changing the DISPLAY_ALERTS macro to 0.
-#define DISPLAY_ALERTS 1
 
 // STATUS BAR EXTRAS
 //   Extra information that can be displayed on the status bar. Set to 1 to
@@ -404,9 +396,6 @@ extern const uint32_t MIN_BATTERY_VOLTAGE;
 #endif
 #if !(defined(DISPLAY_HOURLY_ICONS))
   #error Invalid configuration. DISPLAY_HOURLY_ICONS not defined.
-#endif
-#if !(defined(DISPLAY_ALERTS))
-  #error Invalid configuration. DISPLAY_ALERTS not defined.
 #endif
 #if !(defined(BATTERY_MONITORING))
   #error Invalid configuration. BATTERY_MONITORING not defined.

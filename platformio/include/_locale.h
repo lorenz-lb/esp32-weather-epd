@@ -126,49 +126,6 @@ extern const char *TXT_LOW_BATTERY_VOLTAGE;
 extern const char *TXT_VERY_LOW_BATTERY_VOLTAGE;
 extern const char *TXT_CRIT_LOW_BATTERY_VOLTAGE;
 
-// ALERTS
-extern const std::vector<String> ALERT_URGENCY;
-// ALERT TERMINOLOGY
-extern const std::vector<String> TERM_SMOG;
-extern const std::vector<String> TERM_SMOKE;
-extern const std::vector<String> TERM_FOG;
-extern const std::vector<String> TERM_METEOR;
-extern const std::vector<String> TERM_NUCLEAR;
-extern const std::vector<String> TERM_BIOHAZARD;
-extern const std::vector<String> TERM_EARTHQUAKE;
-extern const std::vector<String> TERM_FIRE;
-extern const std::vector<String> TERM_HEAT;
-extern const std::vector<String> TERM_WINTER;
-extern const std::vector<String> TERM_TSUNAMI;
-extern const std::vector<String> TERM_LIGHTNING;
-extern const std::vector<String> TERM_SANDSTORM;
-extern const std::vector<String> TERM_FLOOD;
-extern const std::vector<String> TERM_VOLCANO;
-extern const std::vector<String> TERM_AIR_QUALITY;
-extern const std::vector<String> TERM_TORNADO;
-extern const std::vector<String> TERM_SMALL_CRAFT_ADVISORY;
-extern const std::vector<String> TERM_GALE_WARNING;
-extern const std::vector<String> TERM_STORM_WARNING;
-extern const std::vector<String> TERM_HURRICANE_WARNING;
-extern const std::vector<String> TERM_HURRICANE;
-extern const std::vector<String> TERM_DUST;
-extern const std::vector<String> TERM_STRONG_WIND;
-
-// AIR QUALITY INDEX
-extern "C" {
-extern const aqi_scale_t AQI_SCALE;
-extern const char *AUSTRALIA_AQI_TXT[6];
-extern const char *CANADA_AQHI_TXT[4];
-extern const char *EUROPEAN_UNION_CAQI_TXT[5];
-extern const char *HONG_KONG_AQHI_TXT[5];
-extern const char *INDIA_AQI_TXT[6];
-extern const char *CHINA_AQI_TXT[6];
-extern const char *SINGAPORE_PSI_TXT[5];
-extern const char *SOUTH_KOREA_CAI_TXT[4];
-extern const char *UNITED_KINGDOM_DAQI_TXT[4];
-extern const char *UNITED_STATES_AQI_TXT[6];
-}
-
 // COMPASS POINT
 extern const char *COMPASS_POINT_NOTATION[32];
 

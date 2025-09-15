@@ -45,8 +45,7 @@
 #endif
 
 // too large to allocate locally on stack
-static owm_resp_onecall_t       owm_onecall;
-static owm_resp_air_pollution_t owm_air_pollution;
+static dwd_resp_onecall_t       dwd_onecall;
 
 Preferences prefs;
 
@@ -257,9 +256,9 @@ void setup()
   client.setInsecure();
 #elif defined(USE_HTTPS_WITH_CERT_VERIF)
   WiFiClientSecure client;
-  client.setCACert(cert_Sectigo_RSA_Organization_Validation_Secure_Server_CA);
+  client.setCACert(cert_R11);
 #endif
-  int rxStatus = getOWMonecall(client, owm_onecall);
+  int rxStatus = getDWDonecall(client, dwd_onecall, timeInfo);
   if (rxStatus != HTTP_CODE_OK)
   {
     killWiFi();
@@ -273,20 +272,7 @@ void setup()
     powerOffDisplay();
     beginDeepSleep(startTime, &timeInfo);
   }
-  rxStatus = getOWMairpollution(client, owm_air_pollution);
-  if (rxStatus != HTTP_CODE_OK)
-  {
-    killWiFi();
-    statusStr = "Air Pollution API";
-    tmpStr = String(rxStatus, DEC) + ": " + getHttpResponsePhrase(rxStatus);
-    initDisplay();
-    do
-    {
-      drawError(wi_cloud_down_196x196, statusStr, tmpStr);
-    } while (display.nextPage());
-    powerOffDisplay();
-    beginDeepSleep(startTime, &timeInfo);
-  }
+
   killWiFi(); // WiFi no longer needed
 
   // GET INDOOR TEMPERATURE AND HUMIDITY, start BMEx80...
@@ -301,13 +287,6 @@ void setup()
   Adafruit_BME280 bme;
 
   if(bme.begin(BME_ADDRESS, &I2C_bme))
-  {
-#endif
-#if defined(SENSOR_BME680)
-  Serial.print(String(TXT_READING_FROM) + " BME680... ");
-  Adafruit_BME680 bme(&I2C_bme);
-
-  if(bme.begin(BME_ADDRESS))
   {
 #endif
     inTemp     = bme.readTemperature(); // Celsius
@@ -343,10 +322,12 @@ void setup()
   initDisplay();
   do
   {
-    drawCurrentConditions(owm_onecall.current, owm_onecall.daily[0],
-                          owm_air_pollution, inTemp, inHumidity);
-    drawOutlookGraph(owm_onecall.hourly, owm_onecall.daily, timeInfo);
-    drawForecast(owm_onecall.daily, timeInfo);
+    Serial.println("DrawCurrentConditions\n");
+    drawCurrentConditions(dwd_onecall.current, dwd_onecall.days[0], inTemp, inHumidity);
+    Serial.println("DrawOutlook\n");
+    drawOutlookGraph(dwd_onecall.hours, dwd_onecall.days, timeInfo);
+    Serial.println("DrawForecast\n");
+    drawForecast(dwd_onecall.days, timeInfo);
     drawLocationDate(CITY_STRING, dateStr);
     drawStatusBar(statusStr, refreshTimeStr, wifiRSSI, batteryVoltage);
   } while (display.nextPage());
