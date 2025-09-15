@@ -117,7 +117,7 @@ def main():
     print('// by \'' + ' '.join(sys.argv) + '\'')
     print()
     print('// alternatively, the certificate chain can be extracted using openssl')
-    print('// \'openssl s_client -verify 5 -showcerts -connect api.openweathermap.org:443 < /dev/null\'')
+    print('// \'openssl s_client -verify 5 -showcerts -connect api.brightsky.dev:443 < /dev/null\'')
     print()
     print('#ifndef __CERT_H__')
     print('#define __CERT_H__')

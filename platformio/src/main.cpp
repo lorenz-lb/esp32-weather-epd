@@ -256,7 +256,7 @@ void setup()
   client.setInsecure();
 #elif defined(USE_HTTPS_WITH_CERT_VERIF)
   WiFiClientSecure client;
-  client.setCACert(cert_R11);
+  client.setCACert(cert_ISRG_Root_X1);
 #endif
   int rxStatus = getDWDonecall(client, dwd_onecall, timeInfo);
   if (rxStatus != HTTP_CODE_OK)
